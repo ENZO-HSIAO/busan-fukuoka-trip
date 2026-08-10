@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>釜山 × 福岡 · 我們的旅行</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#26314A" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="我們的旅行" />
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="app">
+  <div class="top-bar">
+    <span class="trip-name" id="trip-name"></span>
+    <span style="color:var(--rose)">♥</span>
+  </div>
+
+  <div class="sync-note">
+    <span class="sync-dot off" id="sync-dot"></span>
+    <span id="sync-label">連線中…</span>
+  </div>
+
+  <div id="screen"></div>
+</div>
+
+<div class="bottom-nav">
+  <div class="bottom-nav-inner">
+    <button class="nav-btn active" data-tab="home">
+      <span class="ic">⌂</span><span>Home</span>
+    </button>
+    <button class="nav-btn" data-tab="flights">
+      <span class="ic">✈</span><span>Flights</span>
+    </button>
+    <button class="nav-btn" data-tab="itinerary">
+      <span class="ic">📅</span><span>Itinerary</span>
+    </button>
+    <button class="nav-btn" data-tab="hotels">
+      <span class="ic">🏨</span><span>Hotels</span>
+    </button>
+  </div>
+</div>
+
+<div id="modal-root" class="modal-backdrop hidden">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-head">
+      <div class="t" id="modal-title"></div>
+      <button class="icon-btn" data-action="close-modal">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Firebase (compat SDK — simplest for a static GitHub Pages site, no build step needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
