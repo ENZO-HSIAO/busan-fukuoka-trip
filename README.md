@@ -18,13 +18,51 @@ enzo-hsiao.github.io/busan-fukuoka-trip/
 
 ## 資料儲存在哪裡？（很重要）
 
-這個 App **沒有後端伺服器**，所有航班／飯店／行程／PDF／照片資料都是存在**你目前這台裝置的瀏覽器**裡（用的是 IndexedDB）。這代表：
+這個 App 用你的 Firebase 專案（`trip-c93b4`）當後端：
 
-- 你在手機上新增的資料，**不會自動出現在女友的手機上**。
-- 換瀏覽器、清除瀏覽器資料、或用無痕視窗，都會讓資料消失。
-- 目前設計適合「你負責維護行程，兩人一起看你手機上的畫面」，或是「兩人各自在自己手機建立一份」。
+- 航班／飯店／行程資料存在 **Cloud Firestore**。
+- 上傳的 PDF／照片存在 **Firebase Storage**。
+- 兩支手機打開同一個網址，看到的是**同一份資料**，其中一邊新增/編輯/刪除，另一邊會在幾秒內自動更新畫面（不用手動重新整理）。
 
-如果之後想要「兩人共用同一份、即時同步」的資料，需要加上雲端資料庫（例如 Firebase Firestore、Supabase 等）。目前的架構（`js/state.js`、`js/db.js`）已經把資料存取集中在同一層，之後要換成雲端同步時，只需要替換這兩個檔案內部的實作，其他頁面程式碼幾乎不用動。
+### 你需要在 Firebase Console 做的設定（一次性）
+
+App 本身已經接好 SDK，但 Firebase 專案預設的 Firestore／Storage 規則會擋掉所有讀寫，第一次使用前要去 [Firebase Console](https://console.firebase.google.com/) → 你的專案 `trip-c93b4` 設定：
+
+**1. 啟用 Firestore**：左側選單「Firestore Database」→ 建立資料庫（Production mode 即可，地區選近的，例如 asia-east1）。
+
+**2. 啟用 Storage**：左側選單「Storage」→ 開始使用。
+
+**3. 修改 Firestore 規則**（Firestore Database → 規則），貼上：
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
+**4. 修改 Storage 規則**（Storage → 規則），貼上：
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}
+```
+
+⚠️ **注意**：以上規則是「任何知道你 Firebase 設定值的人都能讀寫」，因為這個 App 沒有登入機制。對兩人使用的私人小型旅行 App 來說這樣通常可以接受（網址本身不會被搜尋引擎索引、也沒有公開入口），但如果你在意安全性，可以之後加上 Firebase Authentication（例如只允許你和女友的 Google 帳號登入），跟我說我可以幫你加。
+
+### 如果之後想切回純本機儲存
+
+不想用 Firebase 的話，資料存取都集中在 `js/state.js` 和 `js/db.js` 這兩個檔案，之後要換掉也只需要改這兩個檔案，其他頁面程式碼幾乎不用動。
 
 ## Google Maps API Key
 
@@ -66,8 +104,9 @@ index.html              App 外殼（頂部列／底部導覽／view 容器）
 css/style.css           全站設計系統與樣式
 js/app.js               進入點：註冊路由、綁定 Settings 按鈕
 js/router.js            極簡 hash router
-js/db.js                IndexedDB 封裝（含 PDF/照片 blob 儲存）
-js/state.js             資料存取層（Flights / Hotels / Itinerary / Config）+ 測試資料
+js/firebase.js           Firebase 初始化（Firestore + Storage）
+js/db.js                 檔案上傳／刪除封裝（Firebase Storage：PDF、照片）
+js/state.js              資料存取層（Flights / Hotels / Itinerary / Config，Firestore CRUD + 即時同步）+ 測試資料
 js/utils.js             日期格式化、Google Maps 連結產生器等共用工具
 js/maps.js              Leaflet 載入 + 從貼上的 Google Maps 網址解析經緯度
 js/components/sheet.js          共用的底部彈出視窗（新增/編輯/詳情表單都用這個）
@@ -79,4 +118,14 @@ js/pages/hotels.js      Hotels 頁
 js/pages/timeline.js    Timeline 頁
 ```
 
-沒有用到任何建置工具（Vite / Webpack / npm），所有第三方套件（字體、Leaflet）都是瀏覽器執行時透過 CDN 載入，維護上就是直接編輯這些檔案、重新整理頁面即可看到效果。
+沒有用到任何建置工具（Vite / Webpack / npm），所有第三方套件（字體、Leaflet、Firebase SDK）都是瀏覽器執行時透過 CDN 以 ES Module 載入，維護上就是直接編輯這些檔案、重新整理頁面即可看到效果。
+
+## 本機預覽（部署前先測試）
+
+因為程式碼用了 `<script type="module">`，瀏覽器基於安全性限制，**不能直接雙擊 index.html 用 `file://` 打開**（畫面會整個空白）。要在本機測試，請在資料夾內啟動一個簡易伺服器，例如：
+
+```
+python3 -m http.server 8000
+```
+
+然後瀏覽器打開 `http://localhost:8000`。部署到 GitHub Pages 後（`https://...github.io/...`）則完全沒有這個限制，直接開網址即可。
