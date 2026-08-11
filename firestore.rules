@@ -1,0 +1,14 @@
+// 把這段貼到 Firebase Console → Firestore Database → Rules，然後按「發布」
+//
+// 這組規則允許「任何拿得到你的 Firebase 專案金鑰的人」讀寫資料。
+// 因為這個 App 沒有登入系統，這是最簡單能讓你們兩支手機互通的做法，
+// 但代表安全性等同於「一組不公開分享出去就好」的網址，跟公開的 Google
+// 文件連結類似 —— 不要把 firebase-config.js 或這個網站原始碼公開分享。
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

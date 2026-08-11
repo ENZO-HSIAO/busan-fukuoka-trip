@@ -1,7 +1,12 @@
 // Minimal app-shell cache so the PWA installs cleanly and opens instantly.
 // Trip data itself always comes live from Firestore (needs network), this
-// only caches the static shell (HTML/CSS/JS/icons).
-const CACHE_NAME = "trip-app-shell-v1";
+// only caches the static shell (HTML/CSS/JS/icons) as an offline fallback.
+//
+// IMPORTANT: this uses a "network-first" strategy for the shell files, so
+// every time you update app.js / style.css / index.html on GitHub, the
+// next reload picks up the new version immediately instead of getting
+// stuck showing an old cached copy.
+const CACHE_NAME = "trip-app-shell-v2";
 const SHELL_FILES = [
   "./",
   "./index.html",
@@ -31,12 +36,19 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   // Never intercept Firestore/Firebase network calls — always go live.
-  if (event.request.url.includes("firestore.googleapis.com") ||
-      event.request.url.includes("googleapis.com") ||
-      event.request.url.includes("gstatic.com")) {
+  const url = event.request.url;
+  if (url.includes("firestore.googleapis.com") || url.includes("googleapis.com") || url.includes("gstatic.com")) {
     return;
   }
+  // Network-first: always try to get the latest file; only fall back to
+  // the cached copy if there's no network (offline).
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+        return res;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
