@@ -47,7 +47,20 @@ function mapsLink(item) {
   const q = encodeURIComponent(item.address || item.location || item.name || "");
   return `https://www.google.com/maps/search/?api=1&query=${q}`;
 }
-function ownerLabel(o) { return { me: "我", partner: "女友", shared: "共同" }[o] || o; }
+function ownerLabel(o) { return { me: "ENZO", partner: "榛果", shared: "共同" }[o] || o; }
+
+/* ---------- itinerary preset day range ---------- */
+const ITIN_DATES = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21", "2026-11-22", "2026-11-23"];
+const ITIN_CITY_BY_DATE = {
+  "2026-11-16": "釜山",
+  "2026-11-17": "釜山",
+  "2026-11-18": "釜山 → 福岡",
+  "2026-11-19": "福岡",
+  "2026-11-20": "福岡",
+  "2026-11-21": "福岡",
+  "2026-11-22": "福岡",
+  "2026-11-23": "福岡",
+};
 
 /* ---------- default / seed data ---------- */
 const DEFAULT_TRIP = {
@@ -210,7 +223,13 @@ let flightFilter = "all";
 
 function renderFlights() {
   const filtered = state.flights
-    .filter((f) => flightFilter === "all" || f.owner === flightFilter)
+    .filter((f) => {
+      if (flightFilter === "all") return true;
+      if (flightFilter === "shared") return f.owner === "shared";
+      // A shared flight belongs to both people, so it should also show
+      // up under the "ENZO" and "榛果" individual filters.
+      return f.owner === flightFilter || f.owner === "shared";
+    })
     .sort((a, b) => (a.depDate + (a.depTime || "")).localeCompare(b.depDate + (b.depTime || "")));
 
   const listHTML = filtered.length === 0
@@ -246,7 +265,7 @@ function renderFlights() {
     <div class="pill-row">
       ${["all", "me", "partner", "shared"].map((o) => `
         <button class="pill ${flightFilter === o ? "active" : ""}" data-action="set-flight-filter" data-val="${o}">
-          ${o === "all" ? "全部" : o === "me" ? "我的航班" : o === "partner" ? "女友的航班" : "共同航班"}
+          ${o === "all" ? "全部" : o === "me" ? "ENZO的航班" : o === "partner" ? "榛果的航班" : "共同航班"}
         </button>`).join("")}
     </div>
     ${listHTML}
@@ -282,12 +301,14 @@ function groupedItinerary() {
 
 function renderItinerary() {
   const grouped = groupedItinerary();
-  const dates = Object.keys(grouped).sort();
-  if (!state.itinActiveDate || !dates.includes(state.itinActiveDate)) state.itinActiveDate = dates[0] || todayISO();
+  const extraDates = Object.keys(grouped).filter((d) => !ITIN_DATES.includes(d));
+  const dates = ITIN_DATES.concat(extraDates).sort();
+  if (!state.itinActiveDate || !dates.includes(state.itinActiveDate)) state.itinActiveDate = ITIN_DATES[0];
   const activeDate = state.itinActiveDate;
   const dayList = grouped[activeDate] || [];
   const dayItems = dayList.filter((i) => i.location || i.address || i.mapsUrl);
   const dateIndex = dates.indexOf(activeDate);
+  const headerCity = ITIN_CITY_BY_DATE[activeDate] || (dayList[0] && dayList[0].city) || "";
 
   const dayTabsHTML = dates.length ? `
     <div class="day-tabs" id="day-tabs">
@@ -303,7 +324,7 @@ function renderItinerary() {
       ? emptyState("📅", "還沒有行程", "點下方按鈕新增第一筆行程")
       : `<div style="margin-bottom:22px">
           <div style="font-size:13px;color:var(--navy);letter-spacing:1px;margin-bottom:14px;font-weight:600">
-            ${fmtDate(activeDate)} ${dayList[0]?.city ? `· ${esc(dayList[0].city)}` : ""}
+            ${fmtDate(activeDate)} ${headerCity ? `· ${esc(headerCity)}` : ""}
             ${dates.length > 1 ? `<span style="float:right;font-size:11px;color:var(--ink-soft);font-weight:400">${dateIndex + 1} / ${dates.length}</span>` : ""}
           </div>
           ${dayList.length === 0
@@ -357,7 +378,8 @@ document.addEventListener("touchend", (e) => {
   const dx = e.changedTouches[0].clientX - touchX;
   touchX = null;
   const grouped = groupedItinerary();
-  const dates = Object.keys(grouped).sort();
+  const extraDates = Object.keys(grouped).filter((d) => !ITIN_DATES.includes(d));
+  const dates = ITIN_DATES.concat(extraDates).sort();
   if (Math.abs(dx) < 40 || dates.length < 2) return;
   const idx = dates.indexOf(state.itinActiveDate);
   if (dx < 0 && idx < dates.length - 1) { state.itinActiveDate = dates[idx + 1]; render(); }
@@ -497,12 +519,12 @@ function hotelFormHTML(f) {
 }
 
 function itinFormHTML(f) {
+  const cityLabel = ITIN_CITY_BY_DATE[f.date] || f.city || "";
   return `
-    ${field("行程名稱", `<input data-field="name" value="${esc(f.name || "")}" placeholder="例如：海雲台">`)}
-    <div class="field-row">
-      ${field("日期", `<input type="date" data-field="date" value="${f.date || ""}">`)}
-      ${field("城市", `<input data-field="city" value="${esc(f.city || "")}" placeholder="釜山">`)}
+    <div style="font-size:12.5px;color:var(--ink-soft);margin:-4px 0 14px">
+      ${fmtDate(f.date)}${cityLabel ? ` · ${esc(cityLabel)}` : ""}（日期由上方選擇的分頁決定）
     </div>
+    ${field("行程名稱", `<input data-field="name" value="${esc(f.name || "")}" placeholder="例如：海雲台">`)}
     <div class="field-row">
       ${field("開始時間", `<input type="time" data-field="startTime" value="${f.startTime || ""}">`)}
       ${field("結束時間", `<input type="time" data-field="endTime" value="${f.endTime || ""}">`)}
@@ -563,7 +585,7 @@ function viewFlightHTML(f) {
       ${detailRow("座位", f.seat)}
       ${f.notes ? detailRow("備註", f.notes) : ""}
     </div>
-    ${f.pdf ? `<div style="margin-bottom:16px"><iframe src="${f.pdf}" style="width:100%;height:320px;border-radius:14px;border:1px solid var(--line)"></iframe></div>` : ""}
+    ${f.pdf ? `<a class="btn-secondary" style="margin-bottom:16px" href="${f.pdf}" download="${f.pdfName || "flight-ticket.pdf"}">📄 查看機票 PDF</a>` : ""}
     <div class="btn-row">
       <button class="btn-secondary" data-action="edit-flight" data-id="${f.id}">✏ 編輯</button>
       <button class="btn-danger" data-action="delete-flight" data-id="${f.id}">🗑 刪除</button>
