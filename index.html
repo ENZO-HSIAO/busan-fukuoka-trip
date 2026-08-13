@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+<title>釜山 × 福岡 · 我們的旅行</title>
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#26314A" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="我們的旅行" />
+
+<style>
+  html, body { margin: 0; padding: 0; background: #F6F3EC; }
+  #root { min-height: 100vh; }
+  /* simple loading splash shown until React mounts */
+  #boot-loading {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: #F6F3EC; color: #6E6A5E; font-family: -apple-system, "PingFang TC", sans-serif; font-size: 14px;
+  }
+</style>
+</head>
+<body>
+
+<div id="boot-loading">載入中…</div>
+<div id="root"></div>
+
+<!-- React (UMD builds — no bundler needed) -->
+<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+<!-- Babel standalone — transforms the JSX file directly in the browser -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js" crossorigin></script>
+
+<!-- Firebase (shared data store between both phones) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<!-- App source (JSX, transformed in-browser by Babel above) -->
+<script type="text/babel" data-presets="react" src="app.jsx"></script>
+
+<script>
+  // hide the loading splash once React has painted something into #root
+  const hideBoot = () => { const el = document.getElementById("boot-loading"); if (el) el.remove(); };
+  const obs = new MutationObserver(() => { if (document.getElementById("root").childNodes.length) { hideBoot(); obs.disconnect(); } });
+  obs.observe(document.getElementById("root"), { childList: true });
+  setTimeout(hideBoot, 4000); // safety fallback
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>
